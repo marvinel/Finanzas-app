@@ -20,6 +20,8 @@ interface TransactionsListProps {
   hasMore: boolean;
   selectedCategory: string;
   onCategoryChange: (category: string) => void;
+  selectedType: string;
+  onTypeChange: (type: string) => void;
 }
 
 const FILTER_CATEGORIES: { value: string; label: string }[] = [
@@ -36,12 +38,35 @@ export function TransactionsList({
   hasMore,
   selectedCategory,
   onCategoryChange,
+  selectedType,
+  onTypeChange,
 }: TransactionsListProps) {
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
         <h3 className="text-lg font-semibold">Transacciones</h3>
         <span className="text-sm text-[var(--muted)]">{total} total</span>
+      </div>
+
+      {/* Type filter (income/expense) */}
+      <div className="mb-3 flex gap-2">
+        {[
+          { value: "all", label: "Todos" },
+          { value: "expense", label: "Gastos" },
+          { value: "income", label: "Ingresos" },
+        ].map((t) => (
+          <button
+            key={t.value}
+            onClick={() => onTypeChange(t.value)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              selectedType === t.value
+                ? "bg-[var(--accent)] text-white"
+                : "border border-[var(--card-border)] text-[var(--muted)] hover:bg-[var(--card-border)]"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Category filter */}

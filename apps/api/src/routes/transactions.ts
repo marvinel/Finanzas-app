@@ -5,7 +5,7 @@ const router = Router();
 
 // GET /api/transactions - List transactions with optional filters
 router.get("/", (req, res) => {
-  const { category, startDate, endDate, search, limit = "50", offset = "0" } = req.query;
+  const { category, startDate, endDate, search, type, limit = "50", offset = "0" } = req.query;
 
   let query = "SELECT * FROM transactions WHERE 1=1";
   const params: any[] = [];
@@ -13,6 +13,12 @@ router.get("/", (req, res) => {
   if (category && category !== "all") {
     query += " AND category = ?";
     params.push(category);
+  }
+
+  if (type === "income") {
+    query += " AND amount > 0";
+  } else if (type === "expense") {
+    query += " AND amount < 0";
   }
 
   if (startDate) {

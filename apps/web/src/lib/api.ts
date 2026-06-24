@@ -23,6 +23,7 @@ export async function getTransactions(params?: {
   startDate?: string;
   endDate?: string;
   search?: string;
+  type?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -31,6 +32,7 @@ export async function getTransactions(params?: {
   if (params?.startDate) searchParams.set("startDate", params.startDate);
   if (params?.endDate) searchParams.set("endDate", params.endDate);
   if (params?.search) searchParams.set("search", params.search);
+  if (params?.type) searchParams.set("type", params.type);
   if (params?.limit) searchParams.set("limit", String(params.limit));
   if (params?.offset) searchParams.set("offset", String(params.offset));
 

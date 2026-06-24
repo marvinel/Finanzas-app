@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -45,13 +46,19 @@ export default function Dashboard() {
     }
   }, []);
 
-  async function loadFilteredData(month: string, category?: string) {
+  async function loadFilteredData(month: string, category?: string, type?: string) {
     const dateFilters = getDateRange(month);
     const cat = category ?? selectedCategory;
+    const t = type ?? selectedType;
 
     const [catData, txData] = await Promise.all([
       getCategorySummary(dateFilters.startDate, dateFilters.endDate),
-      getTransactions({ limit: 20, ...dateFilters, category: cat !== "all" ? cat : undefined }),
+      getTransactions({
+        limit: 20,
+        ...dateFilters,
+        category: cat !== "all" ? cat : undefined,
+        type: t !== "all" ? t : undefined,
+      }),
     ]);
 
     setCategories(catData);
@@ -67,7 +74,8 @@ export default function Dashboard() {
   async function handleMonthChange(month: string) {
     setSelectedMonth(month);
     setSelectedCategory("all");
-    await loadFilteredData(month, "all");
+    setSelectedType("all");
+    await loadFilteredData(month, "all", "all");
   }
 
   async function handleCategoryChange(category: string) {
@@ -77,6 +85,21 @@ export default function Dashboard() {
       limit: 20,
       ...dateFilters,
       category: category !== "all" ? category : undefined,
+      type: selectedType !== "all" ? selectedType : undefined,
+    });
+    setTransactions(txData.transactions);
+    setTxTotal(txData.total);
+    setTxOffset(20);
+  }
+
+  async function handleTypeChange(type: string) {
+    setSelectedType(type);
+    const dateFilters = getDateRange(selectedMonth);
+    const txData = await getTransactions({
+      limit: 20,
+      ...dateFilters,
+      category: selectedCategory !== "all" ? selectedCategory : undefined,
+      type: type !== "all" ? type : undefined,
     });
     setTransactions(txData.transactions);
     setTxTotal(txData.total);
@@ -90,6 +113,7 @@ export default function Dashboard() {
       offset: txOffset,
       ...dateFilters,
       category: selectedCategory !== "all" ? selectedCategory : undefined,
+      type: selectedType !== "all" ? selectedType : undefined,
     });
     setTransactions((prev) => [...prev, ...data.transactions]);
     setTxOffset((prev) => prev + 20);
@@ -223,6 +247,8 @@ export default function Dashboard() {
                 hasMore={transactions.length < txTotal}
                 selectedCategory={selectedCategory}
                 onCategoryChange={handleCategoryChange}
+                selectedType={selectedType}
+                onTypeChange={handleTypeChange}
               />
             </div>
           </div>
