@@ -2,6 +2,7 @@
 
 import { CATEGORY_LABELS } from "@finanzas/shared";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { TransactionCategory } from "@finanzas/shared";
 
 interface Transaction {
   id: number;
@@ -17,19 +18,47 @@ interface TransactionsListProps {
   total: number;
   onLoadMore?: () => void;
   hasMore: boolean;
+  selectedCategory: string;
+  onCategoryChange: (category: string) => void;
 }
+
+const FILTER_CATEGORIES: { value: string; label: string }[] = [
+  { value: "all", label: "Todas" },
+  ...Object.entries(CATEGORY_LABELS)
+    .filter(([key]) => key !== "income")
+    .map(([value, label]) => ({ value, label })),
+];
 
 export function TransactionsList({
   transactions,
   total,
   onLoadMore,
   hasMore,
+  selectedCategory,
+  onCategoryChange,
 }: TransactionsListProps) {
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
         <h3 className="text-lg font-semibold">Transacciones</h3>
         <span className="text-sm text-[var(--muted)]">{total} total</span>
+      </div>
+
+      {/* Category filter */}
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
+        {FILTER_CATEGORIES.map((cat) => (
+          <button
+            key={cat.value}
+            onClick={() => onCategoryChange(cat.value)}
+            className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              selectedCategory === cat.value
+                ? "bg-[var(--accent)] text-white"
+                : "border border-[var(--card-border)] text-[var(--muted)] hover:bg-[var(--card-border)]"
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
 
       <div className="space-y-2">

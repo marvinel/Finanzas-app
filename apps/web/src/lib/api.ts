@@ -61,6 +61,11 @@ export async function getSubscriptions() {
   return res.json();
 }
 
+export async function getSubscriptionHistory(name: string) {
+  const res = await fetch(`${API_URL}/api/subscriptions/${encodeURIComponent(name)}/history`);
+  return res.json();
+}
+
 export async function updateTransactionCategory(
   id: number,
   category: string,

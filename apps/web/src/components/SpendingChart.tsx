@@ -51,7 +51,10 @@ export function SpendingChart({ data }: SpendingChartProps) {
               backgroundColor: "#141414",
               border: "1px solid #2a2a2a",
               borderRadius: "8px",
+              color: "#ededed",
             }}
+            itemStyle={{ color: "#ededed" }}
+            labelStyle={{ color: "#ededed" }}
           />
           <Legend
             formatter={(value) => (

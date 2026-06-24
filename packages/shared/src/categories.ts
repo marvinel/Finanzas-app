@@ -11,40 +11,36 @@ interface CategoryRule {
  * Order matters — first match wins.
  */
 export const CATEGORY_RULES: CategoryRule[] = [
-  // Subscriptions
+  // Subscriptions (streaming, gym, apps)
   { keywords: ["NETFLIX"], category: "subscriptions", subcategory: "Netflix" },
   { keywords: ["SPOTIFY"], category: "subscriptions", subcategory: "Spotify" },
   { keywords: ["DISNEY PLUS", "DISNEY+"], category: "subscriptions", subcategory: "Disney+" },
   { keywords: ["PRIME VIDE", "PRIME VIDEO"], category: "subscriptions", subcategory: "Prime Video" },
-  { keywords: ["SMARTFIT"], category: "fitness", subcategory: "SmartFit" },
+  { keywords: ["SMARTFIT"], category: "subscriptions", subcategory: "SmartFit" },
   { keywords: ["APPLE.COM BILL", "APPLE.COM"], category: "subscriptions", subcategory: "Apple" },
+  { keywords: ["VUE TESTING"], category: "subscriptions", subcategory: "Vue Testing" },
 
-  // Food delivery
-  { keywords: ["RAPPI"], category: "food_delivery", subcategory: "Rappi" },
-  { keywords: ["IFOOD"], category: "food_delivery", subcategory: "iFood" },
+  // Food (delivery + restaurants)
+  { keywords: ["RAPPI"], category: "food", subcategory: "Rappi" },
+  { keywords: ["IFOOD"], category: "food", subcategory: "iFood" },
+  { keywords: ["SUBWAY"], category: "food", subcategory: "Subway" },
+  { keywords: ["PAPA JOHN"], category: "food", subcategory: "Papa Johns" },
+  { keywords: ["CHALOTE"], category: "food", subcategory: "Chalote" },
+  { keywords: ["COSECHAS"], category: "food", subcategory: "Cosechas" },
+  { keywords: ["CHUZITOS"], category: "food", subcategory: "Chuzitos" },
+  { keywords: ["DOMIORIENT"], category: "food", subcategory: "Domioriente" },
+  { keywords: ["COLLAGE"], category: "food", subcategory: "Collage" },
+  { keywords: ["OXXO"], category: "food", subcategory: "Oxxo" },
 
-  // Restaurants
-  { keywords: ["SUBWAY"], category: "restaurants", subcategory: "Subway" },
-  { keywords: ["PAPA JOHN"], category: "restaurants", subcategory: "Papa Johns" },
-  { keywords: ["CHALOTE"], category: "restaurants", subcategory: "Chalote" },
-  { keywords: ["COSECHAS"], category: "restaurants", subcategory: "Cosechas" },
-  { keywords: ["CHUZITOS"], category: "restaurants", subcategory: "Chuzitos" },
-  { keywords: ["DOMIORIENT"], category: "restaurants", subcategory: "Domioriente" },
-  { keywords: ["COLLAGE"], category: "restaurants", subcategory: "Collage" },
-  { keywords: ["OXXO"], category: "restaurants", subcategory: "Oxxo" },
-
-  // Groceries
+  // Groceries (supermarkets)
   { keywords: ["SUPERTIEND"], category: "groceries", subcategory: "Supertiendas" },
   { keywords: ["TIENDAS AR", "TIENDA AR"], category: "groceries", subcategory: "Tiendas Ara" },
   { keywords: ["TIENDA D1", "D1 "], category: "groceries", subcategory: "D1" },
   { keywords: ["DOLLARCITY"], category: "groceries", subcategory: "Dollarcity" },
   { keywords: ["EXPRESO BR"], category: "groceries" },
+  { keywords: ["MERCADO PA"], category: "groceries", subcategory: "Mercado" },
 
-  // Entertainment
-  { keywords: ["CENTRO COL"], category: "entertainment" },
-  { keywords: ["GAMERMANIA", "COMPU GAMER"], category: "entertainment", subcategory: "Gaming" },
-
-  // Services / Bills
+  // Services (bills, utilities, payments)
   { keywords: ["GASES DEL CARIBE", "Gases del Caribe"], category: "services", subcategory: "Gas" },
   { keywords: ["UNE", "EPM"], category: "services", subcategory: "Internet/TV" },
   { keywords: ["PEXTO"], category: "services", subcategory: "Pexto" },
@@ -52,7 +48,15 @@ export const CATEGORY_RULES: CategoryRule[] = [
   { keywords: ["FIDUCIARIA BANCOL", "FIDEICOMISOS"], category: "services", subcategory: "Fiduciaria" },
   { keywords: ["FUNDACION"], category: "services" },
   { keywords: ["DLOCAL"], category: "services" },
-  { keywords: ["VUE TESTING"], category: "services", subcategory: "Vue Testing" },
+  { keywords: ["GLOBAL COLOMBIA"], category: "services" },
+  { keywords: ["CENTRO COL"], category: "services", subcategory: "Centro Comercial" },
+  { keywords: ["IMPTO GOBIERNO", "4X1000", "4x1000"], category: "services", subcategory: "4x1000" },
+  { keywords: ["EDS ", "GASOLINA"], category: "services", subcategory: "Gasolina" },
+  { keywords: ["CAPITAL BARBE"], category: "services", subcategory: "Barbería" },
+  { keywords: ["BODY SHOP"], category: "services" },
+  { keywords: ["TIENDA ADI"], category: "services", subcategory: "Adidas" },
+  { keywords: ["COMPU GAMER", "GAMERMANIA"], category: "services", subcategory: "Gaming" },
+  { keywords: ["MYC TECHNOLOG"], category: "services" },
 
   // Credit card payments
   { keywords: ["PAGO SUC VIRT TC", "TC VISA", "TC AMEX"], category: "credit_card_payment" },
@@ -61,27 +65,18 @@ export const CATEGORY_RULES: CategoryRule[] = [
   { keywords: ["TRANSFERENCIAS A NEQUI", "TRANSF QR NEQUI"], category: "transfers", subcategory: "Nequi" },
   { keywords: ["TRANSFERENCIA CTA", "TRANSF A ", "TRANSF DE ", "TRANSF QR "], category: "transfers" },
   { keywords: ["PAGO DE NOMI"], category: "income", subcategory: "Nómina" },
+  { keywords: ["PAGO QR"], category: "transfers" },
+  { keywords: ["PAGO PSE"], category: "services" },
 
-  // Cash
+  // Cash withdrawals
   { keywords: ["RETIRO CAJERO", "RETIRO CORRESPONSAL"], category: "cash_withdrawal" },
-
-  // Taxes
-  { keywords: ["IMPTO GOBIERNO", "4X1000", "4x1000"], category: "taxes" },
 
   // Income
   { keywords: ["ABONO INTERESES"], category: "income", subcategory: "Intereses" },
-
-  // Transport
-  { keywords: ["EDS ", "GASOLINA", "TERPEL", "PRIMAX"], category: "transport", subcategory: "Gasolina" },
-
-  // Fitness (if not caught by subscription)
-  { keywords: ["BODY SHOP"], category: "fitness" },
-  { keywords: ["CAPITAL BARBE"], category: "other", subcategory: "Barbería" },
-  { keywords: ["TIENDA ADI"], category: "other", subcategory: "Adidas" },
 ];
 
 /**
- * Known subscriptions for detection (approximate amounts allow for price changes)
+ * Known subscriptions for detection
  */
 export const KNOWN_SUBSCRIPTIONS = [
   { name: "SmartFit", keyword: "SMARTFIT", expectedAmount: -99900 },
@@ -90,6 +85,7 @@ export const KNOWN_SUBSCRIPTIONS = [
   { name: "Disney+", keyword: "DISNEY PLUS", expectedAmount: -50000 },
   { name: "Prime Video", keyword: "PRIME VIDE", expectedAmount: -29900 },
   { name: "Apple", keyword: "APPLE.COM", expectedAmount: -11000 },
+  { name: "Vue Testing", keyword: "VUE TESTING", expectedAmount: -189000 },
 ];
 
 /**
@@ -121,18 +117,13 @@ export function isLikelySubscription(description: string): boolean {
 }
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  food_delivery: "Domicilios",
-  restaurants: "Restaurantes",
-  groceries: "Supermercado",
-  subscriptions: "Suscripciones",
-  entertainment: "Entretenimiento",
-  transport: "Transporte",
-  fitness: "Fitness",
   transfers: "Transferencias",
-  services: "Servicios",
   credit_card_payment: "Pago Tarjetas",
   cash_withdrawal: "Retiros",
-  taxes: "Impuestos",
+  food: "Comida",
+  groceries: "Supermercado",
+  subscriptions: "Suscripciones",
+  services: "Servicios",
   income: "Ingresos",
   other: "Otros",
 };

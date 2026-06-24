@@ -129,9 +129,9 @@ function updateSubscriptions(transactions: Transaction[]): void {
 function calculateSummary(transactions: Transaction[]): SpendingSummary[] {
   const categoryTotals = new Map<TransactionCategory, { total: number; count: number }>();
 
-  // Only count expenses (negative amounts), excluding taxes
+  // Only count expenses (negative amounts), excluding income
   const expenses = transactions.filter(
-    (tx) => tx.amount < 0 && tx.category !== "taxes" && tx.category !== "income"
+    (tx) => tx.amount < 0 && tx.category !== "income"
   );
 
   for (const tx of expenses) {

@@ -9,28 +9,40 @@ router.get("/", (_req, res) => {
 
   const subscriptions = db
     .prepare(
-      `SELECT * FROM subscriptions ORDER BY is_active DESC, ABS(amount) DESC`
-    )
-    .all();
-
-  // Also get recurring charges from transactions
-  const recurring = db
-    .prepare(
       `SELECT 
-        description,
-        subcategory,
+        subcategory as name,
         category,
         COUNT(*) as occurrences,
-        AVG(amount) as avg_amount,
-        MAX(date) as last_date
+        (SELECT t2.amount FROM transactions t2 
+         WHERE t2.is_subscription = 1 AND t2.subcategory = transactions.subcategory
+         ORDER BY t2.date DESC LIMIT 1) as amount,
+        MAX(date) as last_charged,
+        1 as is_active
       FROM transactions
-      WHERE is_subscription = 1
-      GROUP BY description
-      ORDER BY occurrences DESC`
+      WHERE is_subscription = 1 AND subcategory IS NOT NULL
+      GROUP BY subcategory
+      ORDER BY ABS(amount) DESC`
     )
     .all();
 
-  res.json({ subscriptions, recurring });
+  res.json({ subscriptions });
+});
+
+// GET /api/subscriptions/:name/history - Get all charges for a subscription
+router.get("/:name/history", (req, res) => {
+  const { name } = req.params;
+  const db = getDb();
+
+  const charges = db
+    .prepare(
+      `SELECT date, amount, description
+      FROM transactions
+      WHERE is_subscription = 1 AND subcategory = ?
+      ORDER BY date DESC`
+    )
+    .all(name);
+
+  res.json({ name, charges });
 });
 
 // PATCH /api/subscriptions/:id - Toggle active status

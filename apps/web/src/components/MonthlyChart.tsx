@@ -45,7 +45,10 @@ export function MonthlyChart({ data }: MonthlyChartProps) {
               backgroundColor: "#141414",
               border: "1px solid #2a2a2a",
               borderRadius: "8px",
+              color: "#ededed",
             }}
+            itemStyle={{ color: "#ededed" }}
+            labelStyle={{ color: "#ededed" }}
           />
           <Legend />
           <Bar dataKey="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />

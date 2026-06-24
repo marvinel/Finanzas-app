@@ -38,18 +38,13 @@ export interface MonthlySummary {
 }
 
 export type TransactionCategory =
-  | "food_delivery"
-  | "restaurants"
-  | "groceries"
-  | "subscriptions"
-  | "entertainment"
-  | "transport"
-  | "fitness"
   | "transfers"
-  | "services"
   | "credit_card_payment"
   | "cash_withdrawal"
-  | "taxes"
+  | "food"
+  | "groceries"
+  | "subscriptions"
+  | "services"
   | "income"
   | "other";
 

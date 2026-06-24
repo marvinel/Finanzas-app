@@ -48,7 +48,7 @@ router.get("/monthly", (req, res) => {
     monthly.totalIncome += row.income;
     monthly.totalExpenses += row.expenses;
 
-    if (row.category !== "taxes" && row.category !== "income") {
+    if (row.category !== "income") {
       monthly.byCategory.push({
         category: row.category,
         total: row.expenses,
@@ -84,11 +84,10 @@ router.get("/categories", (req, res) => {
   let query = `
     SELECT 
       category,
-      subcategory,
       SUM(ABS(amount)) as total,
       COUNT(*) as count
     FROM transactions
-    WHERE amount < 0 AND category NOT IN ('taxes', 'income')
+    WHERE amount < 0 AND category NOT IN ('income')
   `;
   const params: any[] = [];
 
@@ -101,11 +100,10 @@ router.get("/categories", (req, res) => {
     params.push(endDate);
   }
 
-  query += " GROUP BY category, subcategory ORDER BY total DESC";
+  query += " GROUP BY category ORDER BY total DESC";
 
   const rows = db.prepare(query).all(...params) as {
     category: TransactionCategory;
-    subcategory: string | null;
     total: number;
     count: number;
   }[];
@@ -134,7 +132,7 @@ router.get("/top-merchants", (req, res) => {
       SUM(ABS(amount)) as total,
       AVG(ABS(amount)) as average
     FROM transactions
-    WHERE amount < 0 AND category NOT IN ('taxes', 'income', 'transfers')
+    WHERE amount < 0 AND category NOT IN ('income', 'transfers')
   `;
   const params: any[] = [];
 
