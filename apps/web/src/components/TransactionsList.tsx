@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { CATEGORY_LABELS } from "@finanzas/shared";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { TransactionCategory } from "@finanzas/shared";
+import { updateTransactionCategory } from "@/lib/api";
 
 interface Transaction {
   id: number;
@@ -31,6 +32,11 @@ const FILTER_CATEGORIES: { value: string; label: string }[] = [
     .map(([value, label]) => ({ value, label })),
 ];
 
+const EDITABLE_CATEGORIES = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
+
 export function TransactionsList({
   transactions,
   total,
@@ -41,6 +47,31 @@ export function TransactionsList({
   selectedType,
   onTypeChange,
 }: TransactionsListProps) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [localTransactions, setLocalTransactions] = useState<Transaction[]>([]);
+
+  // Use local state to reflect edits without refetching
+  const displayTransactions = localTransactions.length > 0 ? localTransactions : transactions;
+
+  // Sync when parent transactions change
+  if (transactions !== localTransactions && localTransactions.length > 0) {
+    // Reset local state when filters change
+  }
+
+  async function handleCategoryUpdate(txId: number, newCategory: string) {
+    await updateTransactionCategory(txId, newCategory);
+
+    // Update locally
+    const updated = (localTransactions.length > 0 ? localTransactions : transactions).map((tx) =>
+      tx.id === txId ? { ...tx, category: newCategory } : tx
+    );
+    setLocalTransactions(updated);
+    setEditingId(null);
+  }
+
+  // Reset local state when transactions from parent change
+  const txKey = transactions.map((t) => t.id).join(",");
+
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
@@ -48,7 +79,7 @@ export function TransactionsList({
         <span className="text-sm text-[var(--muted)]">{total} total</span>
       </div>
 
-      {/* Type filter (income/expense) */}
+      {/* Type filter */}
       <div className="mb-3 flex gap-2">
         {[
           { value: "all", label: "Todos" },
@@ -57,7 +88,7 @@ export function TransactionsList({
         ].map((t) => (
           <button
             key={t.value}
-            onClick={() => onTypeChange(t.value)}
+            onClick={() => { onTypeChange(t.value); setLocalTransactions([]); }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               selectedType === t.value
                 ? "bg-[var(--accent)] text-white"
@@ -74,7 +105,7 @@ export function TransactionsList({
         {FILTER_CATEGORIES.map((cat) => (
           <button
             key={cat.value}
-            onClick={() => onCategoryChange(cat.value)}
+            onClick={() => { onCategoryChange(cat.value); setLocalTransactions([]); }}
             className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               selectedCategory === cat.value
                 ? "bg-[var(--accent)] text-white"
@@ -87,19 +118,39 @@ export function TransactionsList({
       </div>
 
       <div className="space-y-2">
-        {transactions.map((tx) => (
+        {(localTransactions.length > 0 ? localTransactions : transactions).map((tx) => (
           <div
             key={tx.id}
             className="flex items-center justify-between rounded-lg border border-[var(--card-border)] p-3"
           >
             <div className="flex-1">
               <p className="text-sm font-medium">{tx.description}</p>
-              <div className="flex gap-2 text-xs text-[var(--muted)]">
+              <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
                 <span>{formatDate(tx.date)}</span>
                 <span>•</span>
-                <span className="rounded bg-[var(--card-border)] px-1.5 py-0.5">
-                  {CATEGORY_LABELS[tx.category as keyof typeof CATEGORY_LABELS] || tx.category}
-                </span>
+                {editingId === tx.id ? (
+                  <select
+                    value={tx.category}
+                    onChange={(e) => handleCategoryUpdate(tx.id, e.target.value)}
+                    onBlur={() => setEditingId(null)}
+                    autoFocus
+                    className="rounded border border-[var(--accent)] bg-[var(--background)] px-1.5 py-0.5 text-xs text-[var(--foreground)]"
+                  >
+                    {EDITABLE_CATEGORIES.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    onClick={() => setEditingId(tx.id)}
+                    className="rounded bg-[var(--card-border)] px-1.5 py-0.5 hover:bg-[var(--accent)] hover:text-white transition-colors"
+                    title="Click para cambiar categoría"
+                  >
+                    {CATEGORY_LABELS[tx.category as keyof typeof CATEGORY_LABELS] || tx.category}
+                  </button>
+                )}
                 {tx.subcategory && (
                   <>
                     <span>•</span>

@@ -26,11 +26,14 @@ export function parseEmailBody(body: string): Transaction | null {
 
   const notification = bancoMatch[1].trim();
 
-  // Extract amount (format: $6.770,00 or $2.166.792,00 or $18,600)
-  const amountMatch = notification.match(/\$([\d.,]+)/);
+  // Extract amount - look for $ followed by number pattern
+  // Must be preceded by typical Bancolombia keywords
+  const amountMatch = notification.match(/(?:por\s*|Compraste\s*|Transferiste\s*|Pagaste\s*|Retiraste\s*)\$([\d.,]+)/i);
   if (!amountMatch) return null;
 
-  const amount = parseColAmount(amountMatch[1]);
+  const rawAmount = amountMatch[1];
+  const amount = parseColAmount(rawAmount);
+  if (amount <= 0) return null;
 
   // Extract date (format: dd/mm/yyyy)
   const dateMatch = notification.match(/(\d{2}\/\d{2}\/\d{4})/);
