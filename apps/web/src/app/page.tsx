@@ -7,6 +7,7 @@ import { SubscriptionsList } from "@/components/SubscriptionsList";
 import { TransactionsList } from "@/components/TransactionsList";
 import { UploadModal } from "@/components/UploadModal";
 import { BalanceCard } from "@/components/BalanceCard";
+import { AddTransactionModal } from "@/components/AddTransactionModal";
 import {
   getMonthlySummary,
   getCategorySummary,
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [txTotal, setTxTotal] = useState(0);
   const [txOffset, setTxOffset] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -194,9 +196,17 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">Finanzas</h1>
           <p className="text-sm text-[var(--muted)]">Control de gastos personal</p>
         </div>
-        {syncResult && (
-          <span className="text-xs text-[var(--success)]">{syncResult}</span>
-        )}
+        <div className="flex items-center gap-3">
+          {syncResult && (
+            <span className="text-xs text-[var(--success)]">{syncResult}</span>
+          )}
+          <button
+            onClick={() => setShowAddTransaction(true)}
+            className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium hover:bg-[var(--card-border)]"
+          >
+            + Agregar
+          </button>
+        </div>
       </div>
 
       {/* Source Tabs */}
@@ -391,6 +401,12 @@ export default function Dashboard() {
         isOpen={showUpload}
         onClose={() => setShowUpload(false)}
         onSuccess={loadData}
+      />
+
+      <AddTransactionModal
+        isOpen={showAddTransaction}
+        onClose={() => setShowAddTransaction(false)}
+        onSuccess={async () => { await loadData(); await refreshCharts(); }}
       />
     </main>
   );
