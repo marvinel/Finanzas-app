@@ -168,10 +168,10 @@ router.get("/balance", (_req, res) => {
 
   const { amount: baseAmount, date: baseDate } = JSON.parse(setting.value);
 
-  // Sum all transactions AFTER the base balance date
+  // Sum all transactions AFTER the base balance was set (by created_at, not date)
   const subsequent = db.prepare(
-    `SELECT SUM(amount) as total FROM transactions WHERE date > ? OR (date = ? AND created_at > ?)`
-  ).get(baseDate, baseDate, setting.updated_at) as { total: number | null };
+    `SELECT SUM(amount) as total FROM transactions WHERE created_at > ?`
+  ).get(setting.updated_at) as { total: number | null };
 
   const currentBalance = baseAmount + (subsequent.total || 0);
 

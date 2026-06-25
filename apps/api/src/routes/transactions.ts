@@ -3,6 +3,24 @@ import { getDb } from "../db.js";
 
 const router = Router();
 
+// POST /api/transactions - Create a manual transaction
+router.post("/", (req, res) => {
+  const { date, description, amount, category, subcategory } = req.body;
+
+  if (!date || !description || amount === undefined) {
+    res.status(400).json({ error: "date, description, and amount are required" });
+    return;
+  }
+
+  const db = getDb();
+  const result = db.prepare(
+    `INSERT INTO transactions (date, description, amount, balance, category, subcategory, is_subscription)
+     VALUES (?, ?, ?, 0, ?, ?, 0)`
+  ).run(date, description, amount, category || "other", subcategory || null);
+
+  res.json({ success: true, id: result.lastInsertRowid });
+});
+
 // GET /api/transactions - List transactions with optional filters
 router.get("/", (req, res) => {
   const { category, startDate, endDate, search, type, limit = "50", offset = "0" } = req.query;
