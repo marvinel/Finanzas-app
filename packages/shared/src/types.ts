@@ -45,6 +45,8 @@ export type TransactionCategory =
   | "groceries"
   | "subscriptions"
   | "services"
+  | "home"
+  | "transport"
   | "income"
   | "other";
 

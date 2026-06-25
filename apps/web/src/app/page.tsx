@@ -134,6 +134,16 @@ export default function Dashboard() {
     setTxOffset(20);
   }
 
+  async function refreshCharts() {
+    const dateFilters = getDateRange(selectedMonth);
+    const [catData, monthlyData] = await Promise.all([
+      getCategorySummary(dateFilters.startDate, dateFilters.endDate),
+      getMonthlySummary(),
+    ]);
+    setCategories(catData);
+    setMonthly(monthlyData);
+  }
+
   async function handleSync() {
     setSyncing(true);
     setSyncResult(null);
@@ -370,6 +380,7 @@ export default function Dashboard() {
                 onCategoryChange={handleCategoryChange}
                 selectedType={selectedType}
                 onTypeChange={handleTypeChange}
+                onTransactionUpdated={refreshCharts}
               />
             </div>
           </div>

@@ -23,6 +23,7 @@ interface TransactionsListProps {
   onCategoryChange: (category: string) => void;
   selectedType: string;
   onTypeChange: (type: string) => void;
+  onTransactionUpdated?: () => void;
 }
 
 const FILTER_CATEGORIES: { value: string; label: string }[] = [
@@ -46,17 +47,10 @@ export function TransactionsList({
   onCategoryChange,
   selectedType,
   onTypeChange,
+  onTransactionUpdated,
 }: TransactionsListProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [localTransactions, setLocalTransactions] = useState<Transaction[]>([]);
-
-  // Use local state to reflect edits without refetching
-  const displayTransactions = localTransactions.length > 0 ? localTransactions : transactions;
-
-  // Sync when parent transactions change
-  if (transactions !== localTransactions && localTransactions.length > 0) {
-    // Reset local state when filters change
-  }
 
   async function handleCategoryUpdate(txId: number, newCategory: string) {
     await updateTransactionCategory(txId, newCategory);
@@ -67,10 +61,10 @@ export function TransactionsList({
     );
     setLocalTransactions(updated);
     setEditingId(null);
-  }
 
-  // Reset local state when transactions from parent change
-  const txKey = transactions.map((t) => t.id).join(",");
+    // Notify parent to refresh charts
+    onTransactionUpdated?.();
+  }
 
   return (
     <div>
