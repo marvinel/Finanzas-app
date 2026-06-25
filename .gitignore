@@ -9,3 +9,5 @@ uploads/
 *.db
 *.db-shm
 *.db-wal
+gmail-token.json
+client_secret*.json

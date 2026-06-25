@@ -6,13 +6,20 @@ import { MonthlyChart } from "@/components/MonthlyChart";
 import { SubscriptionsList } from "@/components/SubscriptionsList";
 import { TransactionsList } from "@/components/TransactionsList";
 import { UploadModal } from "@/components/UploadModal";
+import { BalanceCard } from "@/components/BalanceCard";
 import {
   getMonthlySummary,
   getCategorySummary,
   getSubscriptions,
   getTransactions,
+  getGmailStatus,
+  syncGmail,
+  getGmailConnectUrl,
+  getBalance,
 } from "@/lib/api";
 import { formatCurrency, formatMonth } from "@/lib/format";
+
+type Source = "gmail" | "extractos";
 
 export default function Dashboard() {
   const [monthly, setMonthly] = useState<any[]>([]);
@@ -26,25 +33,39 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [source, setSource] = useState<Source>("gmail");
+  const [balanceData, setBalanceData] = useState<any>({ balance: null, hasBaseBalance: false });
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [monthlyData, subsData] = await Promise.all([
+      const [monthlyData, subsData, gmailStatus] = await Promise.all([
         getMonthlySummary(),
         getSubscriptions(),
+        getGmailStatus(),
       ]);
       setMonthly(monthlyData);
       setSubscriptions(subsData);
+      setGmailConnected(gmailStatus.connected);
+      await loadBalanceData();
 
-      // Load filtered data based on selected month
-      await loadFilteredData(selectedMonth, monthlyData);
+      await loadFilteredData("all", "all", "all");
     } catch (e) {
       console.error("Error loading data:", e);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  async function loadBalanceData() {
+    try {
+      const data = await getBalance();
+      setBalanceData(data);
+    } catch {}
+  }
 
   async function loadFilteredData(month: string, category?: string, type?: string) {
     const dateFilters = getDateRange(month);
@@ -70,6 +91,13 @@ export default function Dashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Auto-sync on load if Gmail is connected
+  useEffect(() => {
+    if (gmailConnected && !syncing) {
+      handleSync();
+    }
+  }, [gmailConnected]);
 
   async function handleMonthChange(month: string) {
     setSelectedMonth(month);
@@ -106,6 +134,23 @@ export default function Dashboard() {
     setTxOffset(20);
   }
 
+  async function handleSync() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const result = await syncGmail();
+      setSyncResult(`${result.added} nuevas transacciones importadas`);
+      if (result.added > 0) {
+        await loadData();
+      }
+      await loadBalanceData();
+    } catch (e: any) {
+      setSyncResult("Error al sincronizar");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function loadMoreTransactions() {
     const dateFilters = getDateRange(selectedMonth);
     const data = await getTransactions({
@@ -119,9 +164,14 @@ export default function Dashboard() {
     setTxOffset((prev) => prev + 20);
   }
 
-  // Get the selected month's summary from monthly data
   const currentMonthData = selectedMonth === "all"
-    ? monthly[0]
+    ? monthly.length > 0
+      ? {
+          totalIncome: monthly.reduce((s, m) => s + m.totalIncome, 0),
+          totalExpenses: monthly.reduce((s, m) => s + m.totalExpenses, 0),
+          balance: monthly.reduce((s, m) => s + m.totalIncome - m.totalExpenses, 0),
+        }
+      : null
     : monthly.find((m) => m.month === selectedMonth);
 
   const isEmpty = !loading && transactions.length === 0 && monthly.length === 0;
@@ -129,33 +179,103 @@ export default function Dashboard() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Finanzas</h1>
-          <p className="text-sm text-[var(--muted)]">
-            Control de gastos personal
-          </p>
+          <p className="text-sm text-[var(--muted)]">Control de gastos personal</p>
         </div>
+        {syncResult && (
+          <span className="text-xs text-[var(--success)]">{syncResult}</span>
+        )}
+      </div>
+
+      {/* Source Tabs */}
+      <div className="mb-6 flex border-b border-[var(--card-border)]">
         <button
-          onClick={() => setShowUpload(true)}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
+          onClick={() => setSource("gmail")}
+          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+            source === "gmail"
+              ? "border-[var(--accent)] text-[var(--accent)]"
+              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
         >
-          Subir Extracto
+          Sincronización Email
+        </button>
+        <button
+          onClick={() => setSource("extractos")}
+          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+            source === "extractos"
+              ? "border-[var(--accent)] text-[var(--accent)]"
+              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          Extractos PDF
         </button>
       </div>
 
+      {/* Gmail Tab */}
+      {source === "gmail" && (
+        <div className="mb-8">
+          {gmailConnected ? (
+            <div className="flex items-center gap-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
+              <div className="flex-1">
+                <p className="font-medium">Gmail conectado</p>
+                <p className="text-sm text-[var(--muted)]">
+                  Sincroniza tus transacciones desde las notificaciones de Bancolombia
+                </p>
+              </div>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-50"
+              >
+                {syncing ? "Sincronizando..." : "Sincronizar"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--card-border)] py-12">
+              <p className="mb-2 text-lg font-medium">Conecta tu Gmail</p>
+              <p className="mb-6 text-sm text-[var(--muted)] text-center max-w-md">
+                Lee automáticamente las notificaciones de Bancolombia para mantener tus transacciones actualizadas en tiempo real
+              </p>
+              <a
+                href={getGmailConnectUrl()}
+                className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
+              >
+                Conectar Gmail
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Extractos Tab */}
+      {source === "extractos" && (
+        <div className="mb-8">
+          <div className="flex items-center gap-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
+            <div className="flex-1">
+              <p className="font-medium">Extractos PDF</p>
+              <p className="text-sm text-[var(--muted)]">
+                Sube tu extracto trimestral de Bancolombia en formato PDF
+              </p>
+            </div>
+            <button
+              onClick={() => setShowUpload(true)}
+              className="rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
+            >
+              Subir Extracto
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Dashboard Content */}
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--card-border)] py-20">
           <p className="mb-2 text-lg font-medium">No hay datos todavía</p>
           <p className="mb-6 text-sm text-[var(--muted)]">
-            Sube tu extracto de Bancolombia para empezar
+            Conecta tu Gmail o sube un extracto para empezar
           </p>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
-          >
-            Subir Extracto
-          </button>
         </div>
       ) : (
         <>
@@ -190,7 +310,12 @@ export default function Dashboard() {
 
           {/* Summary Cards */}
           {currentMonthData && (
-            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
+              <BalanceCard
+                balance={balanceData.balance}
+                hasBaseBalance={balanceData.hasBaseBalance}
+                onUpdate={loadBalanceData}
+              />
               <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
                 <p className="text-sm text-[var(--muted)]">Ingresos</p>
                 <p className="mt-1 text-2xl font-bold text-[var(--success)]">
@@ -205,13 +330,9 @@ export default function Dashboard() {
               </div>
               <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
                 <p className="text-sm text-[var(--muted)]">Balance</p>
-                <p
-                  className={`mt-1 text-2xl font-bold ${
-                    currentMonthData.balance >= 0
-                      ? "text-[var(--success)]"
-                      : "text-[var(--danger)]"
-                  }`}
-                >
+                <p className={`mt-1 text-2xl font-bold ${
+                  currentMonthData.balance >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"
+                }`}>
                   {formatCurrency(currentMonthData.balance)}
                 </p>
               </div>
@@ -264,17 +385,11 @@ export default function Dashboard() {
   );
 }
 
-/**
- * Get start/end date range for a given month filter.
- * "all" returns no filters. "2026-03" returns that month's range.
- */
 function getDateRange(month: string): { startDate?: string; endDate?: string } {
   if (month === "all") return {};
 
   const [year, m] = month.split("-").map(Number);
   const startDate = `${year}-${String(m).padStart(2, "0")}-01`;
-
-  // Last day of the month
   const lastDay = new Date(year, m, 0).getDate();
   const endDate = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 

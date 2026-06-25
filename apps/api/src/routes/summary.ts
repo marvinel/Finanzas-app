@@ -152,4 +152,59 @@ router.get("/top-merchants", (req, res) => {
   res.json(merchants);
 });
 
+// GET /api/summary/balance - Get estimated current balance
+router.get("/balance", (_req, res) => {
+  const db = getDb();
+
+  // Get the saved base balance
+  const setting = db.prepare(
+    "SELECT value, updated_at FROM settings WHERE key = 'base_balance'"
+  ).get() as { value: string; updated_at: string } | undefined;
+
+  if (!setting) {
+    res.json({ balance: null, hasBaseBalance: false });
+    return;
+  }
+
+  const { amount: baseAmount, date: baseDate } = JSON.parse(setting.value);
+
+  // Sum all transactions AFTER the base balance date
+  const subsequent = db.prepare(
+    `SELECT SUM(amount) as total FROM transactions WHERE date > ? OR (date = ? AND created_at > ?)`
+  ).get(baseDate, baseDate, setting.updated_at) as { total: number | null };
+
+  const currentBalance = baseAmount + (subsequent.total || 0);
+
+  res.json({
+    balance: Math.round(currentBalance * 100) / 100,
+    baseAmount,
+    baseDate,
+    adjustment: Math.round((subsequent.total || 0) * 100) / 100,
+    hasBaseBalance: true,
+  });
+});
+
+// POST /api/summary/balance - Set the current balance
+router.post("/balance", (req, res) => {
+  const { balance } = req.body;
+
+  if (balance === undefined || balance === null) {
+    res.status(400).json({ error: "balance is required" });
+    return;
+  }
+
+  const db = getDb();
+  const now = new Date().toISOString();
+  const today = now.split("T")[0];
+
+  const value = JSON.stringify({ amount: Number(balance), date: today });
+
+  db.prepare(
+    `INSERT INTO settings (key, value, updated_at) VALUES ('base_balance', ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+  ).run(value, now);
+
+  res.json({ success: true, balance: Number(balance), date: today });
+});
+
 export { router as summaryRouter };

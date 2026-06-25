@@ -68,6 +68,24 @@ export async function getSubscriptionHistory(name: string) {
   return res.json();
 }
 
+export async function getGmailStatus() {
+  const res = await fetch(`${API_URL}/api/gmail/status`);
+  return res.json();
+}
+
+export async function syncGmail() {
+  const res = await fetch(`${API_URL}/api/gmail/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ maxResults: 500 }),
+  });
+  return res.json();
+}
+
+export function getGmailConnectUrl() {
+  return `${API_URL}/api/gmail/connect`;
+}
+
 export async function updateTransactionCategory(
   id: number,
   category: string,
@@ -77,6 +95,20 @@ export async function updateTransactionCategory(
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ category, subcategory }),
+  });
+  return res.json();
+}
+
+export async function getBalance() {
+  const res = await fetch(`${API_URL}/api/summary/balance`);
+  return res.json();
+}
+
+export async function setBalance(balance: number) {
+  const res = await fetch(`${API_URL}/api/summary/balance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ balance }),
   });
   return res.json();
 }

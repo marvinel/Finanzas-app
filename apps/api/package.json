@@ -8,18 +8,20 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "cors": "^2.8.5",
-    "multer": "^1.4.5-lts.1",
-    "unpdf": "^1.6.2",
+    "@finanzas/shared": "*",
     "better-sqlite3": "^11.0.0",
-    "@finanzas/shared": "*"
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.0",
+    "googleapis": "^173.0.0",
+    "multer": "^1.4.5-lts.1",
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/cors": "^2.8.17",
-    "@types/multer": "^1.4.12",
     "@types/better-sqlite3": "^7.6.12",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.12",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }
