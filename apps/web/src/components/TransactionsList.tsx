@@ -5,6 +5,8 @@ import { CATEGORY_LABELS } from "@finanzas/shared";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { updateTransactionCategory } from "@/lib/api";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 interface Transaction {
   id: number;
   date: string;
@@ -12,6 +14,7 @@ interface Transaction {
   amount: number;
   category: string;
   subcategory: string | null;
+  is_subscription: number;
 }
 
 interface TransactionsListProps {
@@ -55,14 +58,26 @@ export function TransactionsList({
   async function handleCategoryUpdate(txId: number, newCategory: string) {
     await updateTransactionCategory(txId, newCategory);
 
-    // Update locally
     const updated = (localTransactions.length > 0 ? localTransactions : transactions).map((tx) =>
       tx.id === txId ? { ...tx, category: newCategory } : tx
     );
     setLocalTransactions(updated);
     setEditingId(null);
+    onTransactionUpdated?.();
+  }
 
-    // Notify parent to refresh charts
+  async function handleToggleSubscription(txId: number, current: number) {
+    const newValue = current ? 0 : 1;
+    await fetch(`${API_URL}/api/transactions/${txId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isSubscription: newValue }),
+    });
+
+    const updated = (localTransactions.length > 0 ? localTransactions : transactions).map((tx) =>
+      tx.id === txId ? { ...tx, is_subscription: newValue } : tx
+    );
+    setLocalTransactions(updated);
     onTransactionUpdated?.();
   }
 
@@ -153,14 +168,27 @@ export function TransactionsList({
                 )}
               </div>
             </div>
-            <p
-              className={`font-mono text-sm font-medium ${
-                tx.amount < 0 ? "text-[var(--danger)]" : "text-[var(--success)]"
-              }`}
-            >
-              {tx.amount < 0 ? "-" : "+"}
-              {formatCurrency(Math.abs(tx.amount))}
-            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleToggleSubscription(tx.id, tx.is_subscription)}
+                className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
+                  tx.is_subscription
+                    ? "bg-purple-600 text-white"
+                    : "text-[var(--muted)] hover:bg-[var(--card-border)]"
+                }`}
+                title={tx.is_subscription ? "Quitar de suscripciones" : "Marcar como suscripción"}
+              >
+                🔁
+              </button>
+              <p
+                className={`font-mono text-sm font-medium ${
+                  tx.amount < 0 ? "text-[var(--danger)]" : "text-[var(--success)]"
+                }`}
+              >
+                {tx.amount < 0 ? "-" : "+"}
+                {formatCurrency(Math.abs(tx.amount))}
+              </p>
+            </div>
           </div>
         ))}
       </div>

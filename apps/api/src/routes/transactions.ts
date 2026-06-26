@@ -12,11 +12,17 @@ router.post("/", (req, res) => {
     return;
   }
 
+  const { categorizeTransaction, isLikelySubscription } = require("@finanzas/shared");
+  const auto = categorizeTransaction(description);
+  const finalCategory = category || auto.category;
+  const finalSubcategory = subcategory || auto.subcategory || null;
+  const isSub = isLikelySubscription(description) ? 1 : 0;
+
   const db = getDb();
   const result = db.prepare(
     `INSERT INTO transactions (date, description, amount, balance, category, subcategory, is_subscription)
-     VALUES (?, ?, ?, 0, ?, ?, 0)`
-  ).run(date, description, amount, category || "other", subcategory || null);
+     VALUES (?, ?, ?, 0, ?, ?, ?)`
+  ).run(date, description, amount, finalCategory, finalSubcategory, isSub);
 
   res.json({ success: true, id: result.lastInsertRowid });
 });
@@ -76,19 +82,22 @@ router.get("/", (req, res) => {
 // PATCH /api/transactions/:id - Update a transaction's category
 router.patch("/:id", (req, res) => {
   const { id } = req.params;
-  const { category, subcategory } = req.body;
-
-  if (!category) {
-    res.status(400).json({ error: "category is required" });
-    return;
-  }
+  const { category, subcategory, isSubscription } = req.body;
 
   const db = getDb();
-  const result = db
-    .prepare("UPDATE transactions SET category = ?, subcategory = ? WHERE id = ?")
-    .run(category, subcategory || null, id);
+  
+  if (category) {
+    db.prepare("UPDATE transactions SET category = ?, subcategory = ? WHERE id = ?")
+      .run(category, subcategory || null, id);
+  }
 
-  if (result.changes === 0) {
+  if (isSubscription !== undefined) {
+    db.prepare("UPDATE transactions SET is_subscription = ? WHERE id = ?")
+      .run(isSubscription ? 1 : 0, id);
+  }
+
+  const updated = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id);
+  if (!updated) {
     res.status(404).json({ error: "Transaction not found" });
     return;
   }
