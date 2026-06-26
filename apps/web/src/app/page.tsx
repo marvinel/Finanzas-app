@@ -20,8 +20,6 @@ import {
 } from "@/lib/api";
 import { formatCurrency, formatMonth } from "@/lib/format";
 
-type Source = "gmail" | "extractos";
-
 export default function Dashboard() {
   const [monthly, setMonthly] = useState<any[]>([]);
   const [categories, setCategories] = useState<any>({ categories: [], totalExpenses: 0 });
@@ -38,7 +36,6 @@ export default function Dashboard() {
   const [gmailConnected, setGmailConnected] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
-  const [source, setSource] = useState<Source>("gmail");
   const [balanceData, setBalanceData] = useState<any>({ balance: null, hasBaseBalance: false });
 
   const loadData = useCallback(async () => {
@@ -53,7 +50,6 @@ export default function Dashboard() {
       setSubscriptions(subsData);
       setGmailConnected(gmailStatus.connected);
       await loadBalanceData();
-
       await loadFilteredData("all", "all", "all");
     } catch (e) {
       console.error("Error loading data:", e);
@@ -151,13 +147,13 @@ export default function Dashboard() {
     setSyncResult(null);
     try {
       const result = await syncGmail();
-      setSyncResult(`${result.added} nuevas transacciones importadas`);
+      setSyncResult(`${result.added} nuevas`);
       if (result.added > 0) {
         await loadData();
       }
       await loadBalanceData();
     } catch (e: any) {
-      setSyncResult("Error al sincronizar");
+      setSyncResult("Error sync");
     } finally {
       setSyncing(false);
     }
@@ -196,98 +192,42 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">Finanzas</h1>
           <p className="text-sm text-[var(--muted)]">Control de gastos personal</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {syncResult && (
             <span className="text-xs text-[var(--success)]">{syncResult}</span>
           )}
+          {gmailConnected ? (
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="rounded-lg border border-[var(--card-border)] px-3 py-2 text-sm hover:bg-[var(--card-border)] disabled:opacity-50"
+              title="Sincronizar emails de Bancolombia"
+            >
+              {syncing ? "⏳" : "🔄"} Sync
+            </button>
+          ) : (
+            <a
+              href={getGmailConnectUrl()}
+              className="rounded-lg border border-[var(--card-border)] px-3 py-2 text-sm hover:bg-[var(--card-border)]"
+            >
+              Conectar Gmail
+            </a>
+          )}
+          <button
+            onClick={() => setShowUpload(true)}
+            className="rounded-lg border border-[var(--card-border)] px-3 py-2 text-sm hover:bg-[var(--card-border)]"
+            title="Subir extracto PDF"
+          >
+            📄 Extracto
+          </button>
           <button
             onClick={() => setShowAddTransaction(true)}
-            className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium hover:bg-[var(--card-border)]"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
           >
             + Agregar
           </button>
         </div>
       </div>
-
-      {/* Source Tabs */}
-      <div className="mb-6 flex border-b border-[var(--card-border)]">
-        <button
-          onClick={() => setSource("gmail")}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-            source === "gmail"
-              ? "border-[var(--accent)] text-[var(--accent)]"
-              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-          }`}
-        >
-          Sincronización Email
-        </button>
-        <button
-          onClick={() => setSource("extractos")}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-            source === "extractos"
-              ? "border-[var(--accent)] text-[var(--accent)]"
-              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-          }`}
-        >
-          Extractos PDF
-        </button>
-      </div>
-
-      {/* Gmail Tab */}
-      {source === "gmail" && (
-        <div className="mb-8">
-          {gmailConnected ? (
-            <div className="flex items-center gap-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
-              <div className="flex-1">
-                <p className="font-medium">Gmail conectado</p>
-                <p className="text-sm text-[var(--muted)]">
-                  Sincroniza tus transacciones desde las notificaciones de Bancolombia
-                </p>
-              </div>
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-50"
-              >
-                {syncing ? "Sincronizando..." : "Sincronizar"}
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--card-border)] py-12">
-              <p className="mb-2 text-lg font-medium">Conecta tu Gmail</p>
-              <p className="mb-6 text-sm text-[var(--muted)] text-center max-w-md">
-                Lee automáticamente las notificaciones de Bancolombia para mantener tus transacciones actualizadas en tiempo real
-              </p>
-              <a
-                href={getGmailConnectUrl()}
-                className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
-              >
-                Conectar Gmail
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Extractos Tab */}
-      {source === "extractos" && (
-        <div className="mb-8">
-          <div className="flex items-center gap-4 rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
-            <div className="flex-1">
-              <p className="font-medium">Extractos PDF</p>
-              <p className="text-sm text-[var(--muted)]">
-                Sube tu extracto trimestral de Bancolombia en formato PDF
-              </p>
-            </div>
-            <button
-              onClick={() => setShowUpload(true)}
-              className="rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
-            >
-              Subir Extracto
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Dashboard Content */}
       {isEmpty ? (
