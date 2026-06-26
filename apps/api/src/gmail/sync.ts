@@ -56,8 +56,7 @@ export async function syncGmailTransactions(
     INSERT INTO transactions (date, description, amount, balance, category, subcategory, is_subscription)
     SELECT ?, ?, ?, ?, ?, ?, ?
     WHERE NOT EXISTS (
-      SELECT 1 FROM transactions 
-      WHERE date = ? AND description = ? AND amount = ?
+      SELECT 1 FROM transactions WHERE date = ? AND amount = ?
     )
   `);
 
@@ -92,7 +91,6 @@ export async function syncGmailTransactions(
         transaction.isSubscription ? 1 : 0,
         // WHERE NOT EXISTS params
         transaction.date,
-        transaction.description,
         transaction.amount
       );
 

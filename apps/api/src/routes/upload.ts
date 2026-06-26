@@ -65,7 +65,7 @@ router.post("/", upload.single("statement"), async (req, res) => {
       INSERT INTO transactions (date, description, amount, balance, category, subcategory, is_subscription)
       SELECT ?, ?, ?, ?, ?, ?, ?
       WHERE NOT EXISTS (
-        SELECT 1 FROM transactions WHERE date = ? AND description = ? AND amount = ?
+        SELECT 1 FROM transactions WHERE date = ? AND amount = ?
       )
     `);
 
@@ -81,7 +81,6 @@ router.post("/", upload.single("statement"), async (req, res) => {
           tx.isSubscription ? 1 : 0,
           // WHERE NOT EXISTS params
           tx.date,
-          tx.description,
           tx.amount
         );
       }
