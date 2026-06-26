@@ -168,17 +168,22 @@ export function TransactionsList({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => handleToggleSubscription(tx.id, tx.is_subscription)}
-                className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
-                  tx.is_subscription
-                    ? "bg-purple-600 text-white"
-                    : "text-[var(--muted)] hover:bg-[var(--card-border)]"
-                }`}
+                className="group flex items-center gap-1.5"
                 title={tx.is_subscription ? "Quitar de suscripciones" : "Marcar como suscripción"}
               >
-                🔁
+                <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">
+                  Sub
+                </span>
+                <div className={`relative w-7 h-4 rounded-full transition-colors ${
+                  tx.is_subscription ? "bg-purple-600" : "bg-[var(--card-border)]"
+                }`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                    tx.is_subscription ? "translate-x-3.5" : "translate-x-0.5"
+                  }`} />
+                </div>
               </button>
               <p
                 className={`font-mono text-sm font-medium ${
