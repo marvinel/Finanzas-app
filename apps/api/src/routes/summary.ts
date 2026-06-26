@@ -6,7 +6,7 @@ const router = Router();
 
 // GET /api/summary/monthly - Get monthly summary
 router.get("/monthly", (req, res) => {
-  const { months = "3" } = req.query;
+  const { months = "12" } = req.query;
   const db = getDb();
 
   // Get all transactions grouped by month

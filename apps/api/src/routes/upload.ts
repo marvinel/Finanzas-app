@@ -62,8 +62,11 @@ router.post("/", upload.single("statement"), async (req, res) => {
     // Store transactions in database
     const db = getDb();
     const insertStmt = db.prepare(`
-      INSERT OR IGNORE INTO transactions (date, description, amount, balance, category, subcategory, is_subscription)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO transactions (date, description, amount, balance, category, subcategory, is_subscription)
+      SELECT ?, ?, ?, ?, ?, ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM transactions WHERE date = ? AND description = ? AND amount = ?
+      )
     `);
 
     const insertMany = db.transaction((transactions: Transaction[]) => {
@@ -75,7 +78,11 @@ router.post("/", upload.single("statement"), async (req, res) => {
           tx.balance,
           tx.category,
           tx.subcategory || null,
-          tx.isSubscription ? 1 : 0
+          tx.isSubscription ? 1 : 0,
+          // WHERE NOT EXISTS params
+          tx.date,
+          tx.description,
+          tx.amount
         );
       }
     });
