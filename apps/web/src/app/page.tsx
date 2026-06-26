@@ -134,12 +134,14 @@ export default function Dashboard() {
 
   async function refreshCharts() {
     const dateFilters = getDateRange(selectedMonth);
-    const [catData, monthlyData] = await Promise.all([
+    const [catData, monthlyData, subsData] = await Promise.all([
       getCategorySummary(dateFilters.startDate, dateFilters.endDate),
       getMonthlySummary(),
+      getSubscriptions(),
     ]);
     setCategories(catData);
     setMonthly(monthlyData);
+    setSubscriptions(subsData);
   }
 
   async function handleSync() {
