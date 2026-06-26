@@ -60,28 +60,51 @@ router.post("/", upload.single("statement"), async (req, res) => {
     }
 
     // Store transactions in database
+    // Strategy: save user's custom categories, delete period, insert fresh, restore categories
     const db = getDb();
+
+    // Save custom categories (where user manually changed them)
+    const customCategories = db.prepare(
+      `SELECT date, amount, category, subcategory FROM transactions 
+       WHERE date >= ? AND date <= ?`
+    ).all(parsed.periodStart, parsed.periodEnd) as {
+      date: string; amount: number; category: string; subcategory: string | null;
+    }[];
+
+    // Build a map of user overrides (date+amount → category)
+    const categoryOverrides = new Map<string, { category: string; subcategory: string | null }>();
+    for (const row of customCategories) {
+      categoryOverrides.set(`${row.date}|${row.amount}`, {
+        category: row.category,
+        subcategory: row.subcategory,
+      });
+    }
+
+    // Delete existing transactions for this period
+    db.prepare(
+      "DELETE FROM transactions WHERE date >= ? AND date <= ?"
+    ).run(parsed.periodStart, parsed.periodEnd);
+
     const insertStmt = db.prepare(`
       INSERT INTO transactions (date, description, amount, balance, category, subcategory, is_subscription)
-      SELECT ?, ?, ?, ?, ?, ?, ?
-      WHERE NOT EXISTS (
-        SELECT 1 FROM transactions WHERE date = ? AND amount = ?
-      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertMany = db.transaction((transactions: Transaction[]) => {
       for (const tx of transactions) {
+        // Use user's override if they previously categorized this transaction
+        const override = categoryOverrides.get(`${tx.date}|${tx.amount}`);
+        const finalCategory = override?.category || tx.category;
+        const finalSubcategory = override?.subcategory || tx.subcategory || null;
+
         insertStmt.run(
           tx.date,
           tx.description,
           tx.amount,
           tx.balance,
-          tx.category,
-          tx.subcategory || null,
-          tx.isSubscription ? 1 : 0,
-          // WHERE NOT EXISTS params
-          tx.date,
-          tx.amount
+          finalCategory,
+          finalSubcategory,
+          tx.isSubscription ? 1 : 0
         );
       }
     });
