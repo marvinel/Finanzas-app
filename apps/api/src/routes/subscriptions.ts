@@ -10,17 +10,17 @@ router.get("/", (_req, res) => {
   const subscriptions = db
     .prepare(
       `SELECT 
-        subcategory as name,
+        COALESCE(subcategory, description) as name,
         category,
         COUNT(*) as occurrences,
         (SELECT t2.amount FROM transactions t2 
-         WHERE t2.is_subscription = 1 AND t2.subcategory = transactions.subcategory
+         WHERE t2.is_subscription = 1 AND COALESCE(t2.subcategory, t2.description) = COALESCE(transactions.subcategory, transactions.description)
          ORDER BY t2.date DESC LIMIT 1) as amount,
         MAX(date) as last_charged,
         1 as is_active
       FROM transactions
-      WHERE is_subscription = 1 AND subcategory IS NOT NULL
-      GROUP BY subcategory
+      WHERE is_subscription = 1
+      GROUP BY COALESCE(subcategory, description)
       ORDER BY ABS(amount) DESC`
     )
     .all();
@@ -37,10 +37,10 @@ router.get("/:name/history", (req, res) => {
     .prepare(
       `SELECT date, amount, description
       FROM transactions
-      WHERE is_subscription = 1 AND subcategory = ?
+      WHERE is_subscription = 1 AND (subcategory = ? OR description = ?)
       ORDER BY date DESC`
     )
-    .all(name);
+    .all(name, name);
 
   res.json({ name, charges });
 });
