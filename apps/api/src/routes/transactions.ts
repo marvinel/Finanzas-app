@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getDb } from "../db.js";
+import { categorizeTransaction, isLikelySubscription } from "@finanzas/shared";
 
 const router = Router();
 
@@ -12,7 +13,6 @@ router.post("/", (req, res) => {
     return;
   }
 
-  const { categorizeTransaction, isLikelySubscription } = require("@finanzas/shared");
   const auto = categorizeTransaction(description);
   const finalCategory = category || auto.category;
   const finalSubcategory = subcategory || auto.subcategory || null;
