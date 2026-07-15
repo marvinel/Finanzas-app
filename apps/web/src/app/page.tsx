@@ -8,6 +8,7 @@ import { TransactionsList } from "@/components/TransactionsList";
 import { UploadModal } from "@/components/UploadModal";
 import { BalanceCard } from "@/components/BalanceCard";
 import { AddTransactionModal } from "@/components/AddTransactionModal";
+import { CreditCardsSection } from "@/components/CreditCardsSection";
 import {
   getMonthlySummary,
   getCategorySummary,
@@ -348,6 +349,9 @@ export default function Dashboard() {
               />
             </div>
           </div>
+
+          {/* Credit Cards */}
+          <CreditCardsSection />
         </>
       )}
 

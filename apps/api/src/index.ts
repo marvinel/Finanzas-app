@@ -13,6 +13,7 @@ import { transactionsRouter } from "./routes/transactions.js";
 import { summaryRouter } from "./routes/summary.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { gmailRouter } from "./routes/gmail.js";
+import { creditCardsRouter } from "./routes/credit-cards.js";
 import { initDatabase } from "./db.js";
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/api/transactions", transactionsRouter);
 app.use("/api/summary", summaryRouter);
 app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/gmail", gmailRouter);
+app.use("/api/credit-cards", creditCardsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

@@ -54,6 +54,35 @@ export function initDatabase(): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS credit_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      card_number TEXT NOT NULL,
+      card_type TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'COP',
+      period_start TEXT,
+      period_end TEXT,
+      payment_due_date TEXT,
+      total_debt REAL NOT NULL DEFAULT 0,
+      total_credit REAL NOT NULL DEFAULT 0,
+      available_credit REAL NOT NULL DEFAULT 0,
+      minimum_payment REAL NOT NULL DEFAULT 0,
+      total_payment REAL NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS credit_card_movements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      card_number TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'COP',
+      date TEXT NOT NULL,
+      description TEXT NOT NULL,
+      amount REAL NOT NULL,
+      installments TEXT,
+      installment_amount REAL,
+      pending_balance REAL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
     CREATE INDEX IF NOT EXISTS idx_transactions_description ON transactions(description);
