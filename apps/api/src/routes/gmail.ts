@@ -35,13 +35,18 @@ router.get("/callback", async (req, res) => {
 
 // POST /api/gmail/sync - Sync transactions from Gmail
 router.post("/sync", async (req, res) => {
-  const { maxResults = 200, afterDate } = req.body;
+  const { maxResults = 500, afterDate } = req.body;
 
   try {
     const result = await syncGmailTransactions(maxResults, afterDate);
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    // If token expired or invalid, signal to reconnect
+    if (error.message?.includes("invalid_grant") || error.message?.includes("Token")) {
+      res.status(401).json({ error: "Gmail token expired", reconnect: true });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 

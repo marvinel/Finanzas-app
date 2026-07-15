@@ -148,7 +148,19 @@ export default function Dashboard() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const result = await syncGmail();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/gmail/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 500 }),
+      });
+      const result = await res.json();
+
+      if (res.status === 401 && result.reconnect) {
+        setGmailConnected(false);
+        setSyncResult("Token expirado — reconecta Gmail");
+        return;
+      }
+
       setSyncResult(`${result.added} nuevas`);
       if (result.added > 0) {
         await loadData();
