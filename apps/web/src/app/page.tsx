@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [balanceData, setBalanceData] = useState<any>({ balance: null, hasBaseBalance: false });
+  const [view, setView] = useState<"dashboard" | "tarjetas">("dashboard");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -244,8 +245,35 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="mb-6 flex border-b border-[var(--card-border)]">
+        <button
+          onClick={() => setView("dashboard")}
+          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+            view === "dashboard"
+              ? "border-[var(--accent)] text-[var(--accent)]"
+              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => setView("tarjetas")}
+          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+            view === "tarjetas"
+              ? "border-[var(--accent)] text-[var(--accent)]"
+              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          Tarjetas de Crédito
+        </button>
+      </div>
+
+      {/* Credit Cards View */}
+      {view === "tarjetas" && <CreditCardsSection />}
+
       {/* Dashboard Content */}
-      {isEmpty ? (
+      {view === "dashboard" && (isEmpty ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--card-border)] py-20">
           <p className="mb-2 text-lg font-medium">No hay datos todavía</p>
           <p className="mb-6 text-sm text-[var(--muted)]">
@@ -351,9 +379,8 @@ export default function Dashboard() {
           </div>
 
           {/* Credit Cards */}
-          <CreditCardsSection />
         </>
-      )}
+      ))}
 
       <UploadModal
         isOpen={showUpload}
