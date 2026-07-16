@@ -112,14 +112,17 @@ export async function parseCreditCardStatement(
     const paymentsMatch = summaryPage.match(/\(-\) Pagos \/ abonos[\s\S]*?\$\s*([\d.,]+)/);
     const paymentsAmount = paymentsMatch ? parseColCurrency(paymentsMatch[1]) : 0;
 
-    // Parse movements from next page
+    // Parse movements from next page(s)
     const movements: CreditCardMovement[] = [];
-    if (i + 1 < pages.length) {
-      const movPage = pages[i + 1];
-      if (movPage.includes("Detalles del movimiento")) {
+    // Look ahead for movements page matching this currency
+    for (let j = i + 1; j < pages.length; j++) {
+      const movPage = pages[j];
+      const currLabel = currency === "USD" ? "DOLARES" : "PESOS";
+      if (movPage.includes("Detalles del movimiento") && movPage.includes(currLabel)) {
         const movs = parseMovements(movPage, currency);
         movements.push(...movs);
-        i++; // skip movements page
+        if (j === i + 1) i++; // skip if it's the immediate next page
+        break;
       }
     }
 
@@ -154,24 +157,47 @@ function parseMovements(pageText: string, currency: string): CreditCardMovement[
   const movements: CreditCardMovement[] = [];
   const lines = pageText.split("\n");
 
-  // Pattern for movement lines:
-  // "DESCRIPTION AUTHORIZATION DATE $ AMOUNT $ INSTALLMENT_AMOUNT $ PENDING"
-  // or simpler: "DESCRIPTION DATE $ AMOUNT"
-  const movRegex = /^(.+?)(\d{2}\/\d{2}\/\d{4})\s+\$\s*(-?[\d.,]+)\s+(?:(\d+\/\d+)\s+)?\$\s*(-?[\d.,]+)(?:\s+([\d.,]+)\s*%\s+([\d.,]+)\s*%)?\s*\$\s*([\d.,]+)/;
-
-  // Simpler regex for lines like "CUOTA DE MANEJO000000 15/06/2026 $ 28.245,00 $ 28.245,00 $ 0,00"
-  const simpleRegex = /^(.+?)(\d{2}\/\d{2}\/\d{4})\s+\$\s*(-?[\d.,]+)\s+\$\s*(-?[\d.,]+)\s+\$\s*([\d.,]+)/;
-
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.includes("DCF:") || trimmed.includes("Número de") || trimmed.includes("autorización")) continue;
+    if (!trimmed || trimmed.includes("DCF:") || trimmed.includes("Número de") || 
+        trimmed.includes("autorización") || trimmed.includes("cuotas") ||
+        trimmed.includes("Couta/Abono") || trimmed.includes("mensual") ||
+        trimmed.includes("anual") || trimmed.includes("pendiente") ||
+        trimmed.includes("Movimientos") || trimmed.includes("Detalles") ||
+        trimmed.includes("Recuerda") || trimmed.includes("débitos") ||
+        trimmed.includes("Tarjeta:") || trimmed.includes("NIT:") ||
+        trimmed.includes("movimiento")) continue;
 
+    // Full format with installments and interest:
+    // "AMAZON.COM*WC54A94F3279984 31/12/2025 $ 561,80 6/36 $ 15,61 1,8311 % 24,3269 % $ 468,14"
+    const fullRegex = /^(.+?)(\d{2}\/\d{2}\/\d{4})\s+\$\s*(-?[\d.,]+)\s+(\d+\/\d+)\s+\$\s*(-?[\d.,]+)\s+([\d.,]+)\s*%\s*([\d.,]+)\s*%\s*\$\s*([\d.,]+)/;
+    const fullMatch = trimmed.match(fullRegex);
+    if (fullMatch) {
+      const [, desc, dateStr, amountStr, installments, installmentStr, intMonth, intAnnual, pendingStr] = fullMatch;
+      const description = desc.replace(/\d{6,}\s*$/, "").trim();
+      movements.push({
+        date: formatDate(dateStr),
+        description,
+        amount: parseColCurrency(amountStr),
+        installments,
+        installmentAmount: parseColCurrency(installmentStr),
+        interestMonthly: parseFloat(intMonth.replace(",", ".")),
+        interestAnnual: parseFloat(intAnnual.replace(",", ".")),
+        pendingBalance: parseColCurrency(pendingStr),
+      });
+      continue;
+    }
+
+    // Simple format without installments:
+    // "CUOTA DE MANEJO000000 15/06/2026 $ 28.245,00 $ 28.245,00 $ 0,00"
+    // "ABONO DEBITO AUTOMATICO981524 02/06/2026 $ -245.786,00 $ -245.786,00 $ 0,00"
+    const simpleRegex = /^(.+?)(\d{2}\/\d{2}\/\d{4})\s+\$\s*(-?[\d.,]+)\s+\$\s*(-?[\d.,]+)\s+\$\s*([\d.,]+)/;
     const simpleMatch = trimmed.match(simpleRegex);
     if (simpleMatch) {
       const [, desc, dateStr, amountStr, installmentStr, pendingStr] = simpleMatch;
-      const description = desc.replace(/\d{6}\s*$/, "").trim(); // remove authorization number
+      const description = desc.replace(/\d{6,}\s*$/, "").trim();
       const amount = parseColCurrency(amountStr);
-      const isCredit = trimmed.includes("ABONO") || amount < 0 || amountStr.includes("-");
+      const isCredit = description.includes("ABONO") || amountStr.includes("-");
 
       movements.push({
         date: formatDate(dateStr),
@@ -180,33 +206,7 @@ function parseMovements(pageText: string, currency: string): CreditCardMovement[
         installmentAmount: parseColCurrency(installmentStr),
         pendingBalance: parseColCurrency(pendingStr),
       });
-    }
-  }
-
-  // Also try to catch movements in the "Movimientos antes de" section
-  const beforeSection = pageText.match(/Movimientos antes de[\s\S]*/);
-  if (beforeSection) {
-    const beforeLines = beforeSection[0].split("\n");
-    for (const line of beforeLines) {
-      const trimmed = line.trim();
-      const match = trimmed.match(simpleRegex);
-      if (match) {
-        const [, desc, dateStr, amountStr, installmentStr, pendingStr] = match;
-        const description = desc.replace(/\d{6,}\s*$/, "").trim();
-        const amount = parseColCurrency(amountStr);
-
-        // Check if already added
-        const exists = movements.some(m => m.date === formatDate(dateStr) && m.description === description);
-        if (!exists) {
-          movements.push({
-            date: formatDate(dateStr),
-            description,
-            amount,
-            installmentAmount: parseColCurrency(installmentStr),
-            pendingBalance: parseColCurrency(pendingStr),
-          });
-        }
-      }
+      continue;
     }
   }
 
