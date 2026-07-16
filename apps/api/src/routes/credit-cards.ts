@@ -106,7 +106,16 @@ router.post("/upload", upload.single("statement"), async (req, res) => {
 // GET /api/credit-cards - List all cards with latest info
 router.get("/", (_req, res) => {
   const db = getDb();
-  const cards = db.prepare("SELECT * FROM credit_cards ORDER BY card_type, currency").all();
+
+  // Get the most recent entry per card_number + currency
+  const cards = db.prepare(`
+    SELECT * FROM credit_cards 
+    WHERE id IN (
+      SELECT MAX(id) FROM credit_cards GROUP BY card_number, currency
+    )
+    ORDER BY card_type, currency
+  `).all();
+
   res.json({ cards });
 });
 
@@ -126,7 +135,12 @@ router.get("/:cardNumber/movements", (req, res) => {
 
   query += " ORDER BY date DESC";
   const movements = db.prepare(query).all(...params);
-  res.json({ movements });
+
+  // Separate installment purchases (active) from regular movements
+  const installments = movements.filter((m: any) => m.installments && m.pending_balance > 0);
+  const recent = movements.filter((m: any) => !m.installments || m.pending_balance === 0);
+
+  res.json({ movements: recent, installments });
 });
 
 export { router as creditCardsRouter };

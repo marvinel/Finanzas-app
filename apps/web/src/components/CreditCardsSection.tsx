@@ -28,12 +28,14 @@ interface Movement {
   installments: string | null;
   installment_amount: number | null;
   pending_balance: number | null;
+  currency: string;
 }
 
 export function CreditCardsSection() {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [installments, setInstallments] = useState<Movement[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<string | null>(null);
@@ -48,19 +50,17 @@ export function CreditCardsSection() {
     setCards(data.cards);
   }
 
-  async function loadMovements(cardNumber: string, currency?: string) {
-    const params = currency ? `?currency=${currency}` : "";
-    const res = await fetch(`${API_URL}/api/credit-cards/${cardNumber}/movements${params}`);
+  async function loadMovements(cardNumber: string) {
+    const res = await fetch(`${API_URL}/api/credit-cards/${cardNumber}/movements`);
     const data = await res.json();
     setMovements(data.movements);
-    setSelectedCard(cardNumber);
+    setInstallments(data.installments);
+    setSelectedCard(cardNumber === selectedCard ? null : cardNumber);
   }
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-
+    const formData = new FormData(e.currentTarget);
     setUploading(true);
     setUploadResult(null);
 
@@ -70,9 +70,8 @@ export function CreditCardsSection() {
         body: formData,
       });
       const data = await res.json();
-
       if (data.success) {
-        setUploadResult(`✅ ${data.cards.map((c: any) => `${c.cardType} *${c.cardNumber} (${c.currency}): ${c.movements} movimientos`).join(", ")}`);
+        setUploadResult(`✅ Cargado: ${data.cards.map((c: any) => `${c.cardType} *${c.cardNumber}`).join(", ")}`);
         setShowUpload(false);
         loadCards();
       } else {
@@ -85,15 +84,22 @@ export function CreditCardsSection() {
     }
   }
 
-  const formatCardCurrency = (amount: number, currency: string) => {
-    if (currency === "USD") {
-      return `US$ ${amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+  // Group cards by physical card (card_number)
+  const groupedCards = cards.reduce((acc, card) => {
+    if (!acc[card.card_number]) {
+      acc[card.card_number] = { type: card.card_type, currencies: [] };
     }
+    acc[card.card_number].currencies.push(card);
+    return acc;
+  }, {} as Record<string, { type: string; currencies: CreditCard[] }>);
+
+  const fmt = (amount: number, currency: string) => {
+    if (currency === "USD") return `US$ ${amount.toFixed(2)}`;
     return formatCurrency(amount);
   };
 
   return (
-    <div className="mt-8">
+    <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">Tarjetas de Crédito</h2>
         <button
@@ -104,133 +110,150 @@ export function CreditCardsSection() {
         </button>
       </div>
 
-      {uploadResult && (
-        <p className="mb-4 text-sm">{uploadResult}</p>
-      )}
+      {uploadResult && <p className="mb-4 text-sm">{uploadResult}</p>}
 
-      {/* Upload form */}
       {showUpload && (
         <form onSubmit={handleUpload} className="mb-6 rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
           <div className="flex gap-3 items-end">
             <div className="flex-1">
               <label className="mb-1 block text-sm text-[var(--muted)]">PDF Extracto TC</label>
-              <input
-                type="file"
-                name="statement"
-                accept=".pdf"
-                required
-                className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--background)] px-3 py-2 text-sm"
-              />
+              <input type="file" name="statement" accept=".pdf" required
+                className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--background)] px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="mb-1 block text-sm text-[var(--muted)]">Contraseña</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="Cédula"
-                className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--background)] px-3 py-2 text-sm"
-              />
+              <input type="password" name="password" placeholder="Cédula"
+                className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--background)] px-3 py-2 text-sm" />
             </div>
-            <button
-              type="submit"
-              disabled={uploading}
-              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-50"
-            >
+            <button type="submit" disabled={uploading}
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-50">
               {uploading ? "..." : "Subir"}
             </button>
           </div>
         </form>
       )}
 
-      {/* Cards grid */}
-      {cards.length === 0 ? (
+      {Object.keys(groupedCards).length === 0 ? (
         <p className="text-sm text-[var(--muted)]">No hay tarjetas cargadas. Sube un extracto de TC.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {cards.map((card) => (
-            <button
-              key={card.id}
-              onClick={() => loadMovements(card.card_number, card.currency)}
-              className={`rounded-xl border p-4 text-left transition-colors ${
-                selectedCard === card.card_number
-                  ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                  : "border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--accent)]/50"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-bold">{card.card_type} *{card.card_number}</span>
-                <span className="text-xs rounded bg-[var(--card-border)] px-2 py-0.5">{card.currency}</span>
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Deuda</span>
-                  <span className="font-medium text-[var(--danger)]">
-                    {formatCardCurrency(card.total_debt, card.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Disponible</span>
-                  <span className="font-medium text-[var(--success)]">
-                    {formatCardCurrency(card.available_credit, card.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Pagar antes de</span>
-                  <span className="font-medium">
-                    {card.payment_due_date ? formatDate(card.payment_due_date) : "-"}
-                  </span>
-                </div>
-              </div>
-              {/* Usage bar */}
-              <div className="mt-3">
-                <div className="h-2 w-full rounded-full bg-[var(--card-border)]">
-                  <div
-                    className="h-2 rounded-full bg-[var(--accent)]"
-                    style={{ width: `${card.total_credit > 0 ? ((card.total_credit - card.available_credit) / card.total_credit) * 100 : 0}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  {card.total_credit > 0 ? Math.round(((card.total_credit - card.available_credit) / card.total_credit) * 100) : 0}% usado de {formatCardCurrency(card.total_credit, card.currency)}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+        <div className="space-y-4">
+          {Object.entries(groupedCards).map(([cardNum, group]) => {
+            const mainCard = group.currencies[0];
+            const totalDebt = group.currencies.reduce((s, c) => {
+              return s + (c.currency === "USD" ? c.total_debt * 4200 : c.total_debt);
+            }, 0);
+            const isExpanded = selectedCard === cardNum;
 
-      {/* Movements */}
-      {selectedCard && movements.length > 0 && (
-        <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4">
-          <h3 className="mb-3 text-lg font-semibold">Movimientos</h3>
-          <div className="space-y-2">
-            {movements.map((mov) => (
-              <div key={mov.id} className="flex items-center justify-between rounded-lg border border-[var(--card-border)] p-3">
-                <div>
-                  <p className="text-sm font-medium">{mov.description}</p>
-                  <div className="flex gap-2 text-xs text-[var(--muted)]">
-                    <span>{formatDate(mov.date)}</span>
-                    {mov.installments && (
-                      <>
-                        <span>•</span>
-                        <span>Cuota {mov.installments}</span>
-                      </>
+            return (
+              <div key={cardNum} className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] overflow-hidden">
+                {/* Card Header */}
+                <button
+                  onClick={() => loadMovements(cardNum)}
+                  className="w-full p-4 text-left hover:bg-[var(--card-border)]/20 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold">{group.type} *{cardNum}</span>
+                      <span className="text-xs text-[var(--muted)]">
+                        Pagar antes: {mainCard.payment_due_date ? formatDate(mainCard.payment_due_date) : "-"}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-[var(--muted)]">Deuda total</p>
+                      <p className="text-lg font-bold text-[var(--danger)]">
+                        {formatCurrency(totalDebt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Currency breakdown */}
+                  <div className="mt-3 flex gap-4">
+                    {group.currencies.map((c) => (
+                      <div key={c.currency} className="flex-1 rounded-lg bg-[var(--background)] p-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[var(--muted)]">{c.currency}</span>
+                          <span className="font-medium">{fmt(c.total_debt, c.currency)}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--card-border)]">
+                          <div
+                            className="h-1.5 rounded-full bg-[var(--accent)]"
+                            style={{ width: `${c.total_credit > 0 ? ((c.total_credit - c.available_credit) / c.total_credit) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                          Disponible: {fmt(c.available_credit, c.currency)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </button>
+
+                {/* Expanded: Installments + Movements */}
+                {isExpanded && (
+                  <div className="border-t border-[var(--card-border)] p-4">
+                    {/* Active installments */}
+                    {installments.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="mb-3 text-sm font-semibold">Compras Diferidas Activas</h4>
+                        <div className="space-y-3">
+                          {installments.map((inst) => {
+                            const [current, total] = (inst.installments || "0/0").split("/").map(Number);
+                            const progress = total > 0 ? (current / total) * 100 : 0;
+                            const paid = inst.installment_amount ? inst.installment_amount * current : 0;
+
+                            return (
+                              <div key={inst.id} className="rounded-lg border border-[var(--card-border)] p-3">
+                                <div className="flex justify-between mb-1">
+                                  <span className="text-sm font-medium">{inst.description}</span>
+                                  <span className="text-xs text-[var(--muted)]">{inst.currency}</span>
+                                </div>
+                                <div className="flex justify-between text-xs text-[var(--muted)] mb-2">
+                                  <span>Compra: {fmt(inst.amount, inst.currency)}</span>
+                                  <span>Cuota: {fmt(inst.installment_amount || 0, inst.currency)}/mes</span>
+                                </div>
+                                {/* Progress bar */}
+                                <div className="h-2 w-full rounded-full bg-[var(--card-border)]">
+                                  <div
+                                    className="h-2 rounded-full bg-[var(--success)]"
+                                    style={{ width: `${progress}%` }}
+                                  />
+                                </div>
+                                <div className="mt-1 flex justify-between text-[10px] text-[var(--muted)]">
+                                  <span>Cuota {current}/{total}</span>
+                                  <span>Pagado: ~{fmt(paid, inst.currency)}</span>
+                                  <span>Pendiente: {fmt(inst.pending_balance || 0, inst.currency)}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
-                    {mov.pending_balance !== null && mov.pending_balance > 0 && (
-                      <>
-                        <span>•</span>
-                        <span>Pendiente: ${mov.pending_balance.toLocaleString()}</span>
-                      </>
+
+                    {/* Recent movements */}
+                    {movements.length > 0 && (
+                      <div>
+                        <h4 className="mb-3 text-sm font-semibold">Últimos Movimientos</h4>
+                        <div className="space-y-2">
+                          {movements.map((mov) => (
+                            <div key={mov.id} className="flex justify-between items-center text-sm border-b border-[var(--card-border)] pb-2 last:border-0">
+                              <div>
+                                <p className="font-medium">{mov.description}</p>
+                                <p className="text-xs text-[var(--muted)]">{formatDate(mov.date)}</p>
+                              </div>
+                              <p className={`font-mono ${mov.amount < 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
+                                {fmt(Math.abs(mov.amount), mov.currency)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-                <p className={`font-mono text-sm font-medium ${
-                  mov.amount < 0 ? "text-[var(--success)]" : "text-[var(--danger)]"
-                }`}>
-                  {mov.amount < 0 ? "-" : ""}${Math.abs(mov.amount).toLocaleString()}
-                </p>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
     </div>
