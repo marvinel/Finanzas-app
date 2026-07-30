@@ -117,8 +117,14 @@ export function parseEmailBody(body: string): Transaction | null {
  * - "2,154,793.00" → 2154793 (commas as thousands, dot as decimal)
  */
 function parseColAmount(str: string): number {
-  // If it has both dots and comma: "6.770,00" → Colombian format
+  // If it has both dots and comma with comma last: "6.770,00" → Colombian format
   if (str.includes(".") && str.includes(",") && str.lastIndexOf(",") > str.lastIndexOf(".")) {
+    return parseFloat(str.replace(/\./g, "").replace(",", "."));
+  }
+
+  // If it ends with ",XX" (exactly two digits after comma): treat comma as decimal
+  // "929,00" → 929.00, "6.770,00" already handled above
+  if (/,\d{2}$/.test(str)) {
     return parseFloat(str.replace(/\./g, "").replace(",", "."));
   }
 
@@ -127,16 +133,17 @@ function parseColAmount(str: string): number {
     return parseFloat(str.replace(/,/g, ""));
   }
 
-  // If it only has comma(s) and no dot: "18,600" → comma as thousands
-  if (str.includes(",") && !str.includes(".")) {
+  // If it has multiple commas: "2,154,793" → commas as thousands
+  if ((str.match(/,/g) || []).length > 1) {
     return parseFloat(str.replace(/,/g, ""));
   }
 
-  // If it only has dots: "6.770" → dot as thousands
-  if (str.includes(".") && !/\.\d{2}$/.test(str)) {
-    return parseFloat(str.replace(/\./g, ""));
+  // If one comma with more than 2 digits after: "18,600" → thousands separator
+  const commaMatch = str.match(/,(\d+)$/);
+  if (commaMatch && commaMatch[1].length > 2) {
+    return parseFloat(str.replace(/,/g, ""));
   }
 
-  // Default: just parse it
-  return parseFloat(str.replace(/,/g, ""));
+  // Default: dots as thousands, comma as decimal
+  return parseFloat(str.replace(/\./g, "").replace(",", "."));
 }
